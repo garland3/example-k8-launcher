@@ -1,0 +1,32 @@
+# tinyproxy.conf — rendered by entrypoint.sh.
+#
+# Filter rules pulled from $EGRESS_ALLOWLIST (comma-separated hosts).
+# Anything not matching is rejected (FilterDefaultDeny Yes).
+
+User nobody
+Group nobody
+
+Port 3128
+Listen 0.0.0.0
+Timeout 60
+
+PidFile "/run/tinyproxy/tinyproxy.pid"
+LogFile "/dev/stdout"
+LogLevel Info
+
+# Only this pod talks to us; the launcher's NetworkPolicy keeps everyone
+# else away. Still, lock it to loopback explicitly.
+Allow 127.0.0.1
+Allow ::1
+
+MaxClients 100
+
+# Allow CONNECT to standard TLS ports (LLM + MCP APIs all use 443).
+ConnectPort 443
+ConnectPort 8443
+
+# Destination filter.
+Filter "/etc/tinyproxy/allowlist"
+FilterDefaultDeny Yes
+FilterExtended On
+FilterURLs Off

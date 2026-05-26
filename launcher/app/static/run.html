@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Run · Agent Launcher</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <header>
+    <h1><a href="/">← Agent Launcher</a></h1>
+  </header>
+
+  <main>
+    <section class="card">
+      <h2>Run <span id="run-id"></span> <span id="run-status" class="badge"></span></h2>
+      <dl id="run-meta"></dl>
+      <details>
+        <summary>Prompt</summary>
+        <pre id="run-prompt"></pre>
+      </details>
+    </section>
+
+    <section class="card">
+      <h2>Events</h2>
+      <p class="muted">Streams every prompt, tool call, and line of stdout
+        from the agent. Polled every second.</p>
+      <div id="events"></div>
+    </section>
+  </main>
+
+  <script src="/static/run.js"></script>
+</body>
+</html>

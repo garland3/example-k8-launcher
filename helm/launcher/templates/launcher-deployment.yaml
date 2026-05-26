@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: launcher
+  labels: {{- include "launcher.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels: {{- include "launcher.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels: {{- include "launcher.selectorLabels" . | nindent 8 }}
+    spec:
+      serviceAccountName: launcher
+      containers:
+        - name: launcher
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 8000
+          env:
+            - name: DATABASE_URL
+              value: {{ include "launcher.databaseUrl" . | quote }}
+            - name: AGENT_NAMESPACE
+              value: {{ .Values.agent.namespace | quote }}
+            - name: AGENT_SERVICE_ACCOUNT
+              value: {{ .Values.agent.serviceAccount | quote }}
+            - name: AGENT_IMAGE_REGISTRY
+              value: {{ .Values.agent.imageRegistry | quote }}
+            - name: AGENT_IMAGE_TAG
+              value: {{ .Values.agent.imageTag | quote }}
+            - name: AGENT_API_KEYS_SECRET
+              value: {{ .Values.agent.apiKeysSecret | quote }}
+            - name: EGRESS_ALLOWLIST
+              value: {{ include "launcher.egressAllowlist" . | quote }}
+            - name: NGINX_IMAGE
+              value: "{{ .Values.egress.nginxImage.repository }}:{{ .Values.egress.nginxImage.tag }}"
+            - name: JOB_TTL_SECONDS
+              value: {{ .Values.agent.jobTtlSeconds | quote }}
+            - name: JOB_ACTIVE_DEADLINE_SECONDS
+              value: {{ .Values.agent.jobActiveDeadlineSeconds | quote }}
+            - name: LAUNCHER_INTERNAL_URL
+              value: "http://launcher.{{ .Release.Namespace }}.svc:8000"
+          readinessProbe:
+            httpGet: { path: /healthz, port: http }
+            initialDelaySeconds: 2
+            periodSeconds: 5
+          livenessProbe:
+            httpGet: { path: /healthz, port: http }
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          resources: {{- toYaml .Values.resources | nindent 12 }}

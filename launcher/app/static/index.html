@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Agent Launcher</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <header>
+    <h1>Agent Launcher</h1>
+    <p class="muted">Launch a short-lived AI coding agent on the cluster.</p>
+  </header>
+
+  <main>
+    <section class="card">
+      <h2>New run</h2>
+      <form id="launch-form">
+        <label>Agent kind
+          <select name="agent_kind">
+            <option value="opencode">opencode</option>
+            <option value="claude-code">claude-code</option>
+            <option value="codex">codex</option>
+            <option value="cline">cline</option>
+          </select>
+        </label>
+
+        <label>Model
+          <input type="text" name="model" value="claude-sonnet-4-6" />
+        </label>
+
+        <label>Namespace <span class="muted">(blank = default)</span>
+          <input type="text" name="namespace" placeholder="agent-runs" />
+        </label>
+
+        <label>Image <span class="muted">(blank = built from registry env)</span>
+          <input type="text" name="image" placeholder="ghcr.io/your-org/opencode:latest" />
+        </label>
+
+        <label>Prompt
+          <textarea name="prompt" rows="6" required
+            placeholder="Refactor foo.py to use async ..."></textarea>
+        </label>
+
+        <button type="submit">Launch</button>
+        <span id="launch-status" class="muted"></span>
+      </form>
+    </section>
+
+    <section class="card">
+      <h2>Recent runs <button id="refresh" class="link">refresh</button></h2>
+      <table id="runs">
+        <thead>
+          <tr><th>#</th><th>Kind</th><th>Model</th><th>Namespace</th><th>Status</th><th>Created</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </section>
+  </main>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

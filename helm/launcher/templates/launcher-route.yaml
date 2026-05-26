@@ -1,0 +1,20 @@
+{{- if .Values.route.enabled }}
+# OpenShift Route. Skipped on plain k8s.
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: launcher
+  labels: {{- include "launcher.labels" . | nindent 4 }}
+spec:
+  {{- if .Values.route.host }}
+  host: {{ .Values.route.host | quote }}
+  {{- end }}
+  to:
+    kind: Service
+    name: launcher
+  port:
+    targetPort: http
+  tls:
+    termination: {{ .Values.route.tls.termination }}
+    insecureEdgeTerminationPolicy: Redirect
+{{- end }}

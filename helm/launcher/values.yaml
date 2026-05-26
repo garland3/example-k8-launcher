@@ -1,0 +1,75 @@
+# Every knob the demonstrator exposes. Override with --set or -f.
+
+# --- Launcher (web UI + API) -------------------------------------------------
+image:
+  repository: ghcr.io/your-org/agent-launcher
+  tag: latest
+  pullPolicy: IfNotPresent
+
+replicaCount: 1
+
+resources:
+  requests: { cpu: 50m,  memory: 128Mi }
+  limits:   { cpu: 500m, memory: 512Mi }
+
+route:
+  # OpenShift Route. Set enabled=false if you're on plain k8s and want
+  # an Ingress instead (see ingress: below).
+  enabled: true
+  host: ""           # leave blank for auto-generated *.apps.<cluster>.com
+  tls:
+    termination: edge
+
+ingress:
+  enabled: false
+  className: ""
+  host: agent-launcher.example.com
+
+# --- Agent runs --------------------------------------------------------------
+agent:
+  # Namespace where Jobs are created. Make sure it exists and the
+  # launcher's ServiceAccount has permission (see rbac.yaml).
+  namespace: agent-runs
+
+  # Image registry to pull agent images from. Final image is
+  # "{imageRegistry}/{agent_kind}:{imageTag}" unless overridden in the
+  # launch form.
+  imageRegistry: ghcr.io/your-org
+  imageTag: latest
+
+  serviceAccount: agent-runner
+
+  jobTtlSeconds: 3600
+  jobActiveDeadlineSeconds: 1800
+
+  # Secret with provider API keys (OPENAI_API_KEY, ANTHROPIC_API_KEY, ...).
+  # The chart does NOT create this — put it in `agent.namespace` yourself:
+  #   oc -n {{ .Values.agent.namespace }} create secret generic agent-api-keys \
+  #     --from-literal=ANTHROPIC_API_KEY=... --from-literal=OPENAI_API_KEY=...
+  apiKeysSecret: agent-api-keys
+
+# --- Egress allowlist enforced by the per-pod proxy sidecar ----------------
+egress:
+  # Hostnames the agent is allowed to reach. Anything else is rejected.
+  allowlist:
+    - api.anthropic.com
+    - api.openai.com
+    - mcp.example.com
+  nginxImage:
+    repository: ghcr.io/your-org/nginx-egress
+    tag: latest
+
+# --- Postgres (central event log) -------------------------------------------
+postgres:
+  enabled: true
+  image: postgres:16-alpine
+  user: launcher
+  password: launcher       # change me, or set existingSecret
+  database: launcher
+  existingSecret: ""       # if set, expected keys: postgres-password
+  storage:
+    size: 5Gi
+    storageClassName: ""   # cluster default
+  resources:
+    requests: { cpu: 50m, memory: 128Mi }
+    limits:   { cpu: 500m, memory: 512Mi }
