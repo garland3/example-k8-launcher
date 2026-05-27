@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: launcher
+  labels: {{- include "launcher.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  selector: {{- include "launcher.selectorLabels" . | nindent 4 }}
+  ports:
+    - name: http
+      port: 8000
+      targetPort: http

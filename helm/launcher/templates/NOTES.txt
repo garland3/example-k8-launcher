@@ -1,0 +1,33 @@
+launcher installed in namespace "{{ .Release.Namespace }}".
+
+Next steps:
+
+1. Create the agent namespace (one-time) and the API-keys Secret in it:
+
+     oc new-project {{ .Values.agent.namespace }} || true
+     oc -n {{ .Values.agent.namespace }} create secret generic \
+       {{ .Values.agent.apiKeysSecret }} \
+       --from-literal=ANTHROPIC_API_KEY=... \
+       --from-literal=OPENAI_API_KEY=...
+
+   The agent namespace also needs the `kubernetes.io/metadata.name` label
+   (OpenShift sets this automatically on 4.13+).
+
+2. Find the launcher URL:
+
+   {{- if .Values.route.enabled }}
+     oc -n {{ .Release.Namespace }} get route launcher \
+       -o jsonpath='{"https://"}{.spec.host}{"\n"}'
+   {{- else if .Values.ingress.enabled }}
+     https://{{ .Values.ingress.host }}
+   {{- else }}
+     oc -n {{ .Release.Namespace }} port-forward svc/launcher 8000:8000
+     # then open http://localhost:8000
+   {{- end }}
+
+3. Open it in a browser and launch a run.
+
+Egress allowlist enforced by the per-pod proxy:
+
+{{ range .Values.egress.allowlist }}  - {{ . }}
+{{ end }}

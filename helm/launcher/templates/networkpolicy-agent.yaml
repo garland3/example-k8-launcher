@@ -1,0 +1,91 @@
+# NetworkPolicies for the agent namespace.
+#
+# Goal: an agent pod can only reach (a) DNS, (b) the launcher's API for
+# event callbacks, and (c) outside-cluster IPs (where the proxy
+# *additionally* enforces a hostname allowlist).
+#
+# Direct egress to other in-cluster services is denied, so a rogue agent
+# can't scan the cluster.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: agent-egress
+  namespace: {{ .Values.agent.namespace }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: agent-run
+  policyTypes: [Egress]
+  egress:
+    # DNS
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    # Launcher API callbacks
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ .Release.Namespace }}
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: launcher
+      ports:
+        - protocol: TCP
+          port: 8000
+    # Outside the cluster (LLM / MCP APIs). The proxy sidecar further
+    # restricts this to the EGRESS_ALLOWLIST hostnames.
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+              - 169.254.0.0/16
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: agent-ingress
+  namespace: {{ .Values.agent.namespace }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: agent-run
+  policyTypes: [Ingress]
+  ingress: []   # nothing should be calling the agent pod
+---
+# Allow the launcher to receive callbacks from agent pods.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: launcher-allow-agents
+  namespace: {{ .Release.Namespace }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: launcher
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ .Values.agent.namespace }}
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: agent-run
+      ports:
+        - protocol: TCP
+          port: 8000
+    # Also allow the OpenShift Router so the UI is reachable.
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              policy-group.network.openshift.io/ingress: ""
+      ports:
+        - protocol: TCP
+          port: 8000

@@ -1,0 +1,46 @@
+# Launcher's ServiceAccount + a Role in the agent namespace that lets it
+# create / read / delete Jobs and their Pods.
+#
+# The agent's ServiceAccount in the agent namespace is separate and
+# intentionally has *no* permissions (automountServiceAccountToken is
+# false in the Job manifest too).
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: launcher
+  labels: {{- include "launcher.labels" . | nindent 4 }}
+---
+# Role + binding in the agent namespace so the launcher can manage Jobs.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: launcher-job-manager
+  namespace: {{ .Values.agent.namespace }}
+rules:
+  - apiGroups: ["batch"]
+    resources: ["jobs"]
+    verbs: ["get", "list", "watch", "create", "delete"]
+  - apiGroups: [""]
+    resources: ["pods", "pods/log", "events"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: launcher-job-manager
+  namespace: {{ .Values.agent.namespace }}
+subjects:
+  - kind: ServiceAccount
+    name: launcher
+    namespace: {{ .Release.Namespace }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: launcher-job-manager
+---
+# Agent's own ServiceAccount in the agent namespace. No permissions.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ .Values.agent.serviceAccount }}
+  namespace: {{ .Values.agent.namespace }}
